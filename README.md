@@ -7,7 +7,28 @@ the same time the metasploit-framework explicitly requires `pg-0.21.0`...
 So the only option left here is to install it using the mis package file built by omnibus. But I do not like the 
 redundant msys2 bundled with it, hence this script here to solve the problem for me and also provide an easy way to update it.  
 
-To achive a robust performance, it would do the following things:
+## Usage:
+```
+msfupdate [options]
+```
+```
+Options:
+  -o, --framework <directory>  specify the directory where the main metasploit framework files should be, by
+                               default this directory is going to be "/opt/framework" 
+  -r, --ruby <directory>       specify the directory where the ruby home folder is, by default this directory
+                               is determined by "$(dirname `which ruby`)/.."
+  -u, --use <msi file>         use the given msi file instead of downloading the latest
+  -b, --bridge <directory>     specify the bridge directory where the batch scripts are outputted, the batch
+                               scripts are not outputted until this is specified
+  -c, --create                 create if the given framework, ruby, bridge directories does not exist
+  -l, --link                   just create entrypoint scripts link to the existing main scripts of metasploit
+                               framework, no downloading, extracting, unzipping, copying at all
+  -k, --keep                   keep all downloaded, extracted, unzipped files in "/tmp"
+  -h, --help                   prints this help
+```
+
+
+## Working process:
 
 ### Prepare the msi package file
 * Check if a specific msi package file is given
