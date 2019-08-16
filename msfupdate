@@ -39,7 +39,7 @@ function updat(){
     if [[ "$1" != "" && "$2" != "" ]]; then
         mkdir -p "$2"
         echo -n \* upating....... >&2
-        \cp -rlf $@ > /dev/null
+        \cp -rlf $@ > /dev/null 2>&1 || \cp -rf $@
         echo done >&2
     fi
 }
@@ -177,9 +177,9 @@ if [[ x$just_link != x1 ]]; then
                 echo The given msi_file \"$msi_file\" does not exist
                 usage
             fi
-            msiexec //a "$(cygpath -w $msi_file)" //qb TARGETDIR="$(cygpath -w /tmp/$tmp_fn)"
+            msiexec //a "$(cygpath -w $msi_file)" //qb TARGETDIR="$(cygpath -w /tmp/$tmp_fn)" || exit
         else
-            msiexec //a "$(cygpath -w /tmp/$tmp_fn.msi)" //qb TARGETDIR="$(cygpath -w /tmp/$tmp_fn)"
+            msiexec //a "$(cygpath -w /tmp/$tmp_fn.msi)" //qb TARGETDIR="$(cygpath -w /tmp/$tmp_fn)" || exit
         fi
     fi
     echo done
