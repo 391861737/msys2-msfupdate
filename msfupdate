@@ -108,7 +108,7 @@ function usage(){
     echo "  -u, --use <msi file>         use the given msi file instead of downloading the latest"
     echo "  -b, --bridge <directory>     specify the bridge directory where the batch scripts are outputted, the batch"
     echo "                               scripts are not outputted until this is specified"
-    echo "  -c, --create                 create if the given framework, ruby, bridge directories does not exist"
+    echo "  -c, --create                 create if the given framework, ruby, bridge directories do not exist"
     echo "  -l, --link                   just create entrypoint scripts link to the existing main scripts of metasploit"
     echo "                               framework, no downloading, extracting, unzipping, copying at all"
     echo "  -k, --keep                   keep all downloaded, extracted, unzipped files in \"/tmp\""

@@ -20,7 +20,7 @@ Options:
   -u, --use <msi file>         use the given msi file instead of downloading the latest
   -b, --bridge <directory>     specify the bridge directory where the batch scripts are outputted, the batch
                                scripts are not outputted until this is specified
-  -c, --create                 create if the given framework, ruby, bridge directories does not exist
+  -c, --create                 create if the given framework, ruby, bridge directories do not exist
   -l, --link                   just create entrypoint scripts link to the existing main scripts of metasploit
                                framework, no downloading, extracting, unzipping, copying at all
   -k, --keep                   keep all downloaded, extracted, unzipped files in "/tmp"
