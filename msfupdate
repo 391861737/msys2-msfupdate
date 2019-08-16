@@ -1,0 +1,219 @@
+#! /bin/bash
+
+# expose commands
+function expose(){
+    if [[ -e "$framework/$1" ]]; then
+        echo "#! /bin/bash" > /usr/bin/$1
+        echo "$framework/$1 \$@" >> /usr/bin/$1
+        if [[ "$2" != "" ]]; then
+            local batchfile="$2/$1.cmd"
+            echo "@echo off" > $batchfile
+            echo "setlocal" >> $batchfile
+            echo "set PATH=%PATH%;$(cygpath -w $ruby_home/bin)" >> $batchfile
+            echo "ruby $(cygpath -w $framework/$1) %*" >> $batchfile
+            echo "endlocal" >> $batchfile
+        fi
+    fi
+}
+
+# backup the given directory
+function backup(){
+    local b="$1.backup"
+    if [[ -e "$b" ]]; then
+        echo the backup exists, removing is needed >&2
+        echo -n \* removing...... >&2
+        rm -rf "$b" > /dev/null
+        echo done >&2
+    fi
+    
+    if [[ -e "$1" ]]; then
+        echo -n \* backing up ... >&2
+        mv "$1" "$b" > /dev/null && mkdir "$1" > /dev/null
+        echo done >&2
+        echo "$b"
+    fi
+}
+
+# update 
+function updat(){
+    if [[ "$1" != "" && "$2" != "" ]]; then
+        mkdir -p "$2"
+        echo -n \* upating....... >&2
+        \cp -rlf $@ > /dev/null
+        echo done >&2
+    fi
+}
+
+# cleanup
+function cleanup(){
+    if [[ -e "$1" ]]; then
+        echo -n \* cleaning up... >&2
+        rm -rf "$1"
+        echo done >&2
+    fi
+}
+
+# batch process
+function process(){
+    if [[ "$1" == "-f" ]]; then
+        local f=1
+        shift  
+    fi
+    if [[ "$1" != "" ]]; then
+        local target="$1"; shift;
+        echo processing $target
+        
+        if [[ x$f == x1 ]]; then
+            $($@)
+        else
+            local b=`backup $target`
+            $($@) && cleanup $b
+        fi
+        
+        echo done
+    fi    
+}
+
+function verfiy(){
+    if [[ "$1" == "-o" ]]; then
+        local optional=1
+        shift
+    fi
+    if [[ "$1" == "" ]]; then
+        if [[ x$optional != x1 ]]; then
+            echo Could not find any $2, please specify one
+            return 1
+        fi
+        return 2
+    elif [[ ! -d "$1" ]]; then
+        if [[ x$create_dir == x1 ]]; then
+            mkdir -p "$1"
+        else
+            echo The given $2 is not valid
+            return 1
+        fi
+    fi
+    return 0
+}
+
+function usage(){
+    echo ""
+    echo "Usage:"
+    echo "  msfupdate [options]"
+    echo "Options:"
+    echo "  -o, --framework <directory>  specify the directory where the main metasploit framework files should be, by"
+    echo "                               default this directory is going to be \"/opt/framework\" "
+    echo "  -r, --ruby <directory>       specify the directory where the ruby home folder is, by default this directory"
+    echo "                               is determined by \"\$(dirname \`which ruby\`)/..\""
+    echo "  -u, --use <msi file>         use the given msi file instead of downloading the latest"
+    echo "  -b, --bridge <directory>     specify the bridge directory where the batch scripts are outputted, the batch"
+    echo "                               scripts are not outputted until this is specified"
+    echo "  -c, --create                 create if the given framework, ruby, bridge directories does not exist"
+    echo "  -l, --link                   just create entrypoint scripts link to the existing main scripts of metasploit"
+    echo "                               framework, no downloading, extracting, unzipping, copying at all"
+    echo "  -k, --keep                   keep all downloaded, extracted, unzipped files in \"/tmp\""
+    echo "  -h, --help                   this prints me..."
+    exit
+}
+
+# variables
+framework=/opt/framework
+ruby_home="$(dirname `which ruby 2>/dev/null` 2>/dev/null)/.."
+download_src="http://windows.metasploit.com/metasploitframework-latest.msi"
+tmp_fn=metasploitframework-latest
+
+# read arguments
+unset just_link keep_tmp
+until [ $# -eq 0 ]; do
+    case "$1" in
+        -f|--framework) 
+            framework=$2; shift; shift;;
+        -r|--ruby) 
+            ruby_home=$2; shift; shift;;
+        -u|--use) 
+            msi_file=$2; shift; shift;;
+        -b|--bridge)
+            bridge=$2; shift; shift;;
+        -c|--create)
+            create_dir=1; shift;;
+        -l|--link) 
+            just_link=1; shift;;
+        -k|--keep) 
+            keep_tmp=1; shift;;
+        -h|--help)
+            usage; shift;;
+        *) 
+            echo Unknown option \"$1\"
+            usage
+        ;;
+    esac
+done
+
+# verfiy arguments
+verfiy "$ruby_home" "ruby home directory"
+if [[ $? == 1 ]]; then
+    usage
+fi
+verfiy "$framework" "metasploit framework main directory"
+if [[ $? == 1 ]]; then
+    usage
+fi
+
+if [[ x$just_link != x1 ]]; then
+
+    # download
+    if [[ "$msi_file" == "" ]]; then
+        wget -h > /dev/null 2>&1 \
+        || echo Y|pacman -S wget 2>/dev/null \
+        || { echo "Could not find or install the wget tool, please check it"; exit 1; }
+        wget -c -O /tmp/$tmp_fn.msi $download_src
+    fi 
+
+    # extract
+    echo -n extracting...
+    if [[ ! -e /tmp/$tmp_fn ]]; then
+        if [[ "$msi_file" != "" ]]; then
+            if [[ ! -e "$msi_file" ]]; then
+                echo The given msi_file \"$msi_file\" does not exist
+                usage
+            fi
+            msiexec //a "$(cygpath -w $msi_file)" //qb TARGETDIR="$(cygpath -w /tmp/$tmp_fn)"
+        else
+            msiexec //a "$(cygpath -w /tmp/$tmp_fn.msi)" //qb TARGETDIR="$(cygpath -w /tmp/$tmp_fn)"
+        fi
+    fi
+    echo done
+    # unzip
+    echo -n unzipping....
+    if [[ ! -d /tmp/$tmp_fn/embedded ]]; then
+        pushd /tmp/$tmp_fn > /dev/null && unzip -o metasploit-framework.zip | awk 'BEGIN {ORS="."} {if(NR%1000==0)print ""}' && popd > /dev/null
+    fi
+    echo done
+    
+    # update framework
+    process "$framework" updat "/tmp/$tmp_fn/embedded/framework/." "$framework"
+    # update ruby
+    process -f "$ruby_home/bin" updat "/tmp/$tmp_fn/embedded/bin/." "$ruby_home/bin"
+    process -f "$ruby_home/lib" updat "/tmp/$tmp_fn/embedded/lib/." "$ruby_home/lib"
+    process -f "$ruby_home/share" updat "/tmp/$tmp_fn/embedded/share/." "$ruby_home/share"
+    process -f "$ruby_home/ssl" updat "/tmp/$tmp_fn/embedded/ssl/." "$ruby_home/ssl"
+    process -f "$ruby_home/include" updat "/tmp/$tmp_fn/embedded/include/." "$ruby_home/include"
+    cp -f "/tmp/$tmp_fn/embedded/LICENSE.txt" "$ruby_home/LICENSE.txt"
+    
+    # cleaning up
+    if [[ x$keep_tmp != x1 ]]; then
+        rm -rf /tmp/$tmp_fn.msi
+        rm -rf /tmp/$tmp_fn
+    fi
+fi
+
+verfiy -o "$bridge" "bridge directory"
+if [[ $? == 1 ]]; then
+    bridge=""
+fi
+expose msfconsole $bridge
+expose msfd $bridge
+expose msfdb $bridge
+expose msfrpc $bridge
+expose msfrpcd $bridge
+expose msfvenom $bridge
