@@ -3,7 +3,7 @@ As we know, the `metasploit-framework.msi` installs the framework along with the
 unnecessarily needed when we have a msys2 platform installed already.  
 And after some investigation and hardworking on building it from source on windows, I found it is nearly impossible
 to do that. Because the `pg-0.21.0-x64-mingw32` or `pg-0.21.0-x86-mingw32` requires ruby *< 2.5, >= 2.0*, while at 
-the same time the metasploit-framework explicitly requires `pg-0.21.0`...  
+the same time the metasploit-framework explicitly requires `pg-0.21.0` **and** `ruby 2.6.2`...  
 So the only option left here is to install it using the mis package file built by omnibus. But I do not like the 
 redundant msys2 bundled with it, hence this script here to solve the problem for me and also provide an easy way to update it.  
 
